@@ -23,26 +23,30 @@ struct ContentView: View {
     var body: some View {
         NavigationView {
             Form {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("When do you want to wake up?")
-                        .font(.headline)
+                Section("How much do you wanna sleep?") {
                     
                     Stepper("\(sleepAmount.formatted()) hours", value: $sleepAmount, in: 4...12, step: 0.25)
                 }
-                Stepper(coffeeAmountText(), value: $coffeeAmount, in: 0...12)
-                
+                Section("How many coffees did you drink?") {
+                    Stepper(coffeeAmountText(), value: $coffeeAmount, in: 0...12)
+                    Picker("How much Coffee do you drunk: ", selection: $coffeeAmount) {
+                        ForEach(0...12, id: \.self) {
+                            Text("\($0)")
+                        }
+                    }
+                }
+                Section("Wann willst du aufstehen?") {
                     DatePicker("Please enter a time", selection: $wakeUp, displayedComponents: .hourAndMinute)
                         .labelsHidden()
+                }
+                
+                Section("optimale Einschlafzeit:") {
+                    Text(calculateBedTime()).font(.largeTitle)
+                }
+                
                 
             }.navigationTitle("BetterRest")
-                .toolbar {
-                    Button("Calculate", action: calculateBedTime)
-                }
-                .alert(alertTitle, isPresented: $showingAlert) {
-                    Button("OK") {}
-                } message: {
-                    Text(alertMessage)
-                }
+                
         }
         
     }
@@ -53,7 +57,7 @@ struct ContentView: View {
             return "\(coffeeAmount) cups"
         }
     }
-    func calculateBedTime() {
+    func calculateBedTime() -> String{
         do {
             let config = MLModelConfiguration()
             let model = try SleepCalculator(configuration: config)
@@ -62,13 +66,14 @@ struct ContentView: View {
             let minute = (components.minute ?? 0) * 60
             let prediction = try model.prediction(wake: Double(hour + minute), estimatedSleep: sleepAmount, coffee: Double(coffeeAmount))
             let sleepTime = wakeUp - prediction.actualSleep
-            alertTitle = "Your ideal bedtime is..."
-            alertMessage = sleepTime.formatted(date: .omitted, time: .shortened)
+            
+            return sleepTime.formatted(date: .omitted, time: .shortened)
         } catch {
-            alertTitle = "Error"
-            alertMessage = "Sorry, there was a problem calculating your bedtime"
+            return """
+            Error,
+            Sorry, there was a problem calculating your bedtime
+            """
         }
-        showingAlert = true
     }
 }
 
